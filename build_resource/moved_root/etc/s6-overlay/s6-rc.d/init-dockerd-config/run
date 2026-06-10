@@ -1,0 +1,38 @@
+#!/command/with-contenv bash
+getent group docker >/dev/null || groupadd docker
+usermod -aG docker abc 2>/dev/null || true
+mkdir -p /var/lib/docker /var/run
+if [ -n "${DOCKER_TLS_CERTDIR:-}" ]; then
+    mkdir -p "${DOCKER_TLS_CERTDIR}/server" "${DOCKER_TLS_CERTDIR}/client"
+    if [ ! -f "${DOCKER_TLS_CERTDIR}/server/cert.pem" ]; then
+        echo "[init-dockerd-config] Generating self-signed TLS certificates..."
+        mkdir -p "${DOCKER_TLS_CERTDIR}/ca"
+        CA_KEY="${DOCKER_TLS_CERTDIR}/ca/key.pem"
+        CA_CERT="${DOCKER_TLS_CERTDIR}/ca/cert.pem"
+        openssl genrsa -out "${CA_KEY}" 4096 2>/dev/null
+        openssl req -new -x509 -days 825 -key "${CA_KEY}" -out "${CA_CERT}" \
+            -subj "/CN=Docker-DinD-CA" 2>/dev/null
+        SRV_KEY="${DOCKER_TLS_CERTDIR}/server/key.pem"
+        SRV_CSR="${DOCKER_TLS_CERTDIR}/server/csr.pem"
+        SRV_CERT="${DOCKER_TLS_CERTDIR}/server/cert.pem"
+        openssl genrsa -out "${SRV_KEY}" 4096 2>/dev/null
+        openssl req -new -key "${SRV_KEY}" -out "${SRV_CSR}" \
+            -subj "/CN=docker-daemon" 2>/dev/null
+        echo "subjectAltName = DNS:localhost,IP:127.0.0.1" > /tmp/docker_san.ext
+        openssl x509 -req -days 825 -in "${SRV_CSR}" -CA "${CA_CERT}" -CAkey "${CA_KEY}" \
+            -CAcreateserial -out "${SRV_CERT}" -extfile /tmp/docker_san.ext 2>/dev/null
+        cp "${CA_CERT}" "${DOCKER_TLS_CERTDIR}/server/ca.pem"
+        CLI_KEY="${DOCKER_TLS_CERTDIR}/client/key.pem"
+        CLI_CSR="${DOCKER_TLS_CERTDIR}/client/csr.pem"
+        CLI_CERT="${DOCKER_TLS_CERTDIR}/client/cert.pem"
+        openssl genrsa -out "${CLI_KEY}" 4096 2>/dev/null
+        openssl req -new -key "${CLI_KEY}" -out "${CLI_CSR}" \
+            -subj "/CN=docker-client" 2>/dev/null
+        openssl x509 -req -days 825 -in "${CLI_CSR}" -CA "${CA_CERT}" -CAkey "${CA_KEY}" \
+            -CAcreateserial -out "${CLI_CERT}" 2>/dev/null
+        cp "${CA_CERT}" "${DOCKER_TLS_CERTDIR}/client/ca.pem"
+        chmod 644 "${CLI_KEY}"
+        rm -f "${SRV_CSR}" "${CLI_CSR}" /tmp/docker_san.ext
+        echo "[init-dockerd-config] TLS certificates generated."
+    fi
+fi

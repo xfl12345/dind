@@ -1,0 +1,15 @@
+#!/command/with-contenv bash
+if [ "${START_DOCKER:-true}" != "true" ]; then
+    sleep infinity
+fi
+if [ ! -e /dev/cpu_dma_latency ]; then
+    echo "[svc-dockerd] Warning: not running in privileged mode, dockerd may not work"
+fi
+find /run /var/run -iname 'docker*.pid' -delete 2>/dev/null || true
+exec /usr/local/bin/dind dockerd \
+    --host=unix:///var/run/docker.sock \
+    ${DOCKER_TLS_CERTDIR:+--host=tcp://0.0.0.0:2376} \
+    ${DOCKER_TLS_CERTDIR:+--tlsverify} \
+    ${DOCKER_TLS_CERTDIR:+--tlscacert=${DOCKER_TLS_CERTDIR}/server/ca.pem} \
+    ${DOCKER_TLS_CERTDIR:+--tlscert=${DOCKER_TLS_CERTDIR}/server/cert.pem} \
+    ${DOCKER_TLS_CERTDIR:+--tlskey=${DOCKER_TLS_CERTDIR}/server/key.pem}

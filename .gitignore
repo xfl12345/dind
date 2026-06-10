@@ -1,0 +1,3 @@
+docker-compose.override.yaml
+/volume/
+*.env
