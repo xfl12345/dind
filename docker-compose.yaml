@@ -6,13 +6,6 @@ services:
       - PGID=${PGID:-911}
       - START_DOCKER=${START_DOCKER:-true}
       - TZ=${TZ:-Asia/Shanghai}
-      # WireGuard 控制变量
-      - PEERS=${PEERS:-}
-      - SERVERURL=${SERVERURL:-auto}
-      - SERVERPORT=${SERVERPORT:-51820}
-      - INTERNAL_SUBNET=${INTERNAL_SUBNET:-10.13.13.0}
-      - PEERDNS=${PEERDNS:-auto}
-      - ALLOWEDIPS=${ALLOWEDIPS:-0.0.0.0/0, ::/0}
     privileged: true
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
@@ -29,14 +22,10 @@ services:
       additional_contexts:
         ubuntu-quick: https://github.com/xfl12345/ubuntu-quick.git#79c0cd1b9aafaacc2ad2bd5cc38ec168e540e418
         openssh-server: https://github.com/linuxserver/docker-openssh-server.git#879130ad04f326a039c173bf40b852a0f7e4485d
-        wireguard: https://github.com/linuxserver/docker-wireguard.git#1df77f6889646e971c295f5bbb5a50479e5654e2
     volumes:
       - /dev/dri:/dev/dri
       - /lib/modules:/lib/modules:ro
       - ./volume/moved_root/config:/config
       - ./volume/moved_root/var/lib/docker:/var/lib/docker
     network_mode: bridge
-    ports:
-      - "22022:22" # SSH
-      - "51821:51820/udp" # WireGuard
     restart: unless-stopped

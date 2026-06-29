@@ -67,13 +67,6 @@ ARG DIND_COMMIT=8d9e3502aba39127e4d12196dae16d306f76993d
 RUN curl -fsSL "https://raw.githubusercontent.com/moby/moby/${DIND_COMMIT}/hack/dind" \
         -o /usr/local/bin/dind && chmod +x /usr/local/bin/dind
 
-# coredns (WireGuard PEERDNS=auto 依赖，不在 Docker APT 仓库中)
-ARG COREDNS_VERSION=1.14.3
-RUN COREDNS_ARCH=$(dpkg --print-architecture) && \
-    curl -fsSL "https://github.com/coredns/coredns/releases/download/v${COREDNS_VERSION}/coredns_${COREDNS_VERSION}_linux_${COREDNS_ARCH}.tgz" \
-        | tar --extract --gzip --directory=/usr/local/bin/ --no-same-owner coredns && \
-    coredns -version
-
 # userns-remap + docker 组
 RUN useradd -U dockremap && \
     usermod -G dockremap dockremap && \
@@ -86,19 +79,8 @@ COPY --from=openssh-server /root /tmp/openssh-server-root
 COPY patch-openssh-server.sh /tmp/patch-openssh-server.sh
 RUN bash /tmp/patch-openssh-server.sh && rm -f /tmp/patch-openssh-server.sh
 
-# wireguard: 从 LSIO docker-wireguard 复制 s6 服务定义 + 默认模板 + 打补丁适配 Ubuntu
-COPY --from=wireguard /root /tmp/wireguard-root
-COPY patch-wireguard.sh /tmp/patch-wireguard.sh
-RUN bash /tmp/patch-wireguard.sh && rm -f /tmp/patch-wireguard.sh
-
-# WireGuard: symlink + kernel module autoload + wg-quick 补丁
-RUN rm -rf /etc/wireguard && \
-    ln -s /config/wg_confs /etc/wireguard && \
-    echo 'wireguard' >> /etc/modules && \
-    sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' /usr/bin/wg-quick
-
-# 自定义 s6 服务定义 (DinD + WireGuard)
+# 自定义 s6 服务定义 (DinD)
 COPY moved_root/etc/s6-overlay/s6-rc.d  /etc/s6-overlay/s6-rc.d
 
-EXPOSE 22 2375 2376 51820/udp
+EXPOSE 22 2375 2376
 VOLUME /var/lib/docker
