@@ -1,0 +1,14 @@
+services:
+  dind:
+    image: "${REGISTRY}/${IMAGE_NAME}:${TAG_SUFFIX}"
+    build:
+      # platforms:
+      #   - linux/amd64
+      #   - linux/arm64
+      cache_from:
+        - type=gha
+      cache_to:
+        - type=gha,mode=max
+      args:
+        # 开启 BuildKit 内联缓存，对后续拉取镜像加速很有用
+        - BUILDKIT_INLINE_CACHE=1 
