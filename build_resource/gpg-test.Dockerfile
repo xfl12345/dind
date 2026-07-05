@@ -77,54 +77,9 @@ RUN <<EOF
 EOF
 
 ### 构建产出镜像
-ARG DEBIAN_FRONTEND=noninteractive
 FROM $BASE_IMAGE_TAG
 SHELL ["/bin/bash", "-c"]
-# APT 源 + GPG 密钥
-COPY --from=ubuntu-quick --chown=root:root --chmod=644 /moved_root/etc/profile.d/* /etc/profile.d/
 COPY --from=apt-builder --chown=root:root --chmod=755 /tmp/docker/build/apt/*.sources /etc/apt/sources.list.d/
 COPY --from=gpg-builder /usr/share/keyrings/* /usr/share/keyrings/
 RUN echo '# Ubuntu sources have moved to /etc/apt/sources.list.d/ubuntu.sources' > /etc/apt/sources.list
-# 安装基础工具 + DinD 依赖 + SSH
 RUN apt update
-### 优先更新 apt 基础套件以优化安装性能
-RUN apt install -y apt-file apt-utils apt-transport-https git curl wget openssl
-### 优先修正 LINUX 字体问题
-RUN apt install -y fonts-noto-mono fonts-noto-extra fonts-noto-cjk-extra fonts-unifont
-### 安装 LINUX 常用基础套件
-RUN apt install -y ubuntu-standard file tar zip unzip p7zip-full xz-utils bc
-### 安装 LINUX 常用离线运维套件
-RUN apt install -y sudo safe-rm tree screen kmod procps htop locales pigz xfsprogs btrfs-progs e2fsprogs qrencode
-### 安装 LINUX 常用网络运维套件
-RUN apt install -y iptables iproute2 nftables libcap2-bin netcat-openbsd resolvconf net-tools bind9-dnsutils wireguard-tools mtr openssh-server
-### 安装 LINUX 常用开发包
-RUN apt install -y build-essential
-### 安装 LINUX 杂项
-RUN apt install -y language-pack-zh-hans
-
-### 安装 Docker 套件
-RUN CONFLICTS=$(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc | cut -f1) && apt remove -y ${CONFLICTS:-runc}
-RUN apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-# Docker dind 辅助脚本 (moby/moby)
-ARG DIND_COMMIT=8d9e3502aba39127e4d12196dae16d306f76993d
-RUN curl -fsSL "https://raw.githubusercontent.com/moby/moby/${DIND_COMMIT}/hack/dind" \
-        -o /usr/local/bin/dind && chmod +x /usr/local/bin/dind
-
-# userns-remap + docker 组
-RUN useradd -U dockremap && \
-    usermod -G dockremap dockremap && \
-    echo 'dockremap:165536:65536' >> /etc/subuid && \
-    echo 'dockremap:165536:65536' >> /etc/subgid && \
-    usermod -aG docker abc 2>/dev/null || true
-
-# openssh-server: 从 LSIO docker-openssh-server 复制 s6 服务定义 + 打补丁适配 Ubuntu
-COPY --from=openssh-server /root /tmp/openssh-server-root
-COPY patch-openssh-server.sh /tmp/patch-openssh-server.sh
-RUN bash /tmp/patch-openssh-server.sh && rm -f /tmp/patch-openssh-server.sh
-
-# 自定义 s6 服务定义 (DinD)
-COPY moved_root/etc/s6-overlay/s6-rc.d  /etc/s6-overlay/s6-rc.d
-
-EXPOSE 22 2375 2376
-VOLUME /var/lib/docker

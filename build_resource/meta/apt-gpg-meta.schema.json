@@ -1,0 +1,29 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "apt-gpg-meta",
+    "description": "APT GPG key metadata — maps key names to their download URL and destination path",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "format": "uri-reference"
+        }
+    },
+    "unevaluatedProperties": {
+        "type": "object",
+        "required": ["src", "dest"],
+        "unevaluatedProperties": false,
+        "properties": {
+            "src": {
+                "type": "string",
+                "format": "uri",
+                "description": "URL to fetch the GPG key from"
+            },
+            "dest": {
+                "type": "string",
+                "pattern": "^/",
+                "description": "Absolute path to write the dearmored key file"
+            }
+        }
+    }
+}

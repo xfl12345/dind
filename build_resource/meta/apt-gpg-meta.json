@@ -1,0 +1,35 @@
+{
+    "$schema": "./apt-gpg-meta.schema.json",
+    "microsoft": {
+        "src": "https://packages.microsoft.com/keys/microsoft.asc",
+        "dest": "/root/apt/keys/microsoft.asc"
+    },
+    "vscodium": {
+        "src": "https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg",
+        "dest": "/root/apt/keys/vscodium.asc"
+    },
+    "antigravity": {
+        "src": "https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg",
+        "dest": "/root/apt/keys/google-antigravity.asc"
+    },
+    "google": {
+        "src": "https://dl.google.com/linux/linux_signing_key.pub",
+        "dest": "/root/apt/keys/google.asc"
+    },
+    "brave-browser-archive": {
+        "src": "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg",
+        "dest": "/root/apt/keys/brave-browser-archive.asc"
+    },
+    "dbeaver": {
+        "src": "https://dbeaver.io/debs/dbeaver.gpg.key",
+        "dest": "/root/apt/keys/dbeaver.asc"
+    },
+    "docker": {
+        "src": "https://download.docker.com/linux/ubuntu/gpg",
+        "dest": "/root/apt/keys/docker.asc"
+    },
+    "nushell": {
+        "src": "https://apt.fury.io/nushell/gpg.key",
+        "dest": "/root/apt/keys/fury-nushell.asc"
+    }
+}

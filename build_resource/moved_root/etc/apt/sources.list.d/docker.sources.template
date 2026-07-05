@@ -3,4 +3,4 @@ URIs: https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu
 # URIs: https://download.docker.com/linux/ubuntu
 Suites: ${DISTRIB_CODENAME}
 Components: stable
-Signed-By: /usr/share/keyrings/docker-keyring.gpg
+Signed-By: /usr/share/keyrings/docker.gpg

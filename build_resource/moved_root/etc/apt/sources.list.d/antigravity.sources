@@ -2,4 +2,4 @@ Types: deb
 URIs: https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/
 Suites: antigravity-debian
 Components: main
-Signed-By: /usr/share/keyrings/antigravity-repo-key.gpg
+Signed-By: /usr/share/keyrings/google-antigravity.gpg
