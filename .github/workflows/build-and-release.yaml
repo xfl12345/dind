@@ -79,25 +79,7 @@ jobs:
           # GITHUB_TOKEN 自动签发，权限由上方 permissions.packages: write 决定
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # https://github.com/docker/metadata-action#typesha
-      # 自动按 git ref 类型生成镜像 tags
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # 规则：
-          #   type=ref,event=tag        → 原 git tag 名
-          #   type=semver               → 仅对 semver 格式 tag 生效：1.2.3 / 1.2 / 1
-          #   type=sha,format=long     → sha-<完整 40 位 hash>，便于溯源
-          tags: |
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha,format=long,prefix=sha-
-
-      - name: Build and push (multi-arch)
+      - name: Build and push
         # 将动态变量注入到环境中，供 docker-compose.ci.yaml 读取
         env:
           TAG_SUFFIX: ${{ matrix.tag_suffix }}
