@@ -90,7 +90,7 @@ jobs:
         env:
           TAG_SUFFIX: ${{ matrix.tag_suffix }}
         run: |
-          DIGEST=$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${TAG_SUFFIX}" --format '{{.Digest}}')
+          DIGEST=$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${TAG_SUFFIX}" --format '{{.Manifest.Digest}}')
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
 
       # https://github.com/actions/attest
