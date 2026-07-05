@@ -13,7 +13,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     shm_size: 8gb
-    image: "localbuild/xfl/dind:ubuntu"
+    image: localbuild/dind
     container_name: dind
     pull_policy: build
     build:

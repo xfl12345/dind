@@ -1,0 +1,126 @@
+# 构建 dind 镜像并发布到 GitHub Container Registry (GHCR)
+# 参考官方教程：https://docs.github.com/en/actions/publishing-packages/publishing-docker-images
+#
+# 触发条件：
+#   - main 分支 push（影响 build_resource/ 或本 workflow 时）
+#   - Pull Request（同上，仅 build 不 push）
+#   - Release 发布（自动生成 semver tag）
+#   - workflow_dispatch 手动触发
+#
+# 镜像位置：ghcr.io/xfl12345/dind
+# 默认多架构：linux/amd64 + linux/arm64
+# 附加构建上下文（build-contexts）与本地 docker-compose.yaml 保持一致，确保
+# Ubuntu-quick、LSIO openssh-server 这两个外部 git context 的 commit hash 固定、可复现
+
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'build_resource/**'
+      - '.github/workflows/docker-publish.yml'
+  pull_request:
+    paths:
+      - 'build_resource/**'
+      - '.github/workflows/docker-publish.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # 同一分支新构建抢占旧的；release 场景下也接受抢占（重发版本属于异常处置）
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  # github.repository 形如 "xfl12345/dind"，GHCR 镜像名直接用即可（GHCR 强制 lowercase）
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build and Push Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+      # attestations/id-token 用于 actions/attest 生成 OCI 制品签名证明，
+      # 拉取方可通过 gh attestation verify 校验镜像来源
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      # 多架构 build 准备：QEMU 模拟 arm64，buildx 编排
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4.1.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.1.0
+
+      # PR 场景不登录，避免写权限，仅做 build 验证
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          # github.actor: 触发当前 workflow 的用户
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN 自动签发，权限由上方 permissions.packages: write 决定
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 自动按 git ref 类型生成 tags：分支名 / tag 名 / PR 号 / semver / sha / latest
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v6.1.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # 规则：
+          #   type=ref,event=branch     → 触发分支名做 tag（main 推送得 ghcr.io/xfl12345/dind:main）
+          #   type=ref,event=pr         → pr-N
+          #   type=ref,event=tag        → 原 git tag 名
+          #   type=semver               → 仅对 semver 格式 tag 生效：1.2.3 / 1.2 / 1
+          #   type=sha,format=short     → sha-<7位短 hash>，便于溯源
+          #   type=raw,value=latest     → 默认分支打 latest
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,format=short,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # build-contexts 必须与 docker-compose.yaml 的 additional_contexts 完全一致
+      # 否则 Dockerfile 里的 COPY --from=ubuntu-quick / openssh-server 拿不到内容
+      - name: Build and push (multi-arch)
+        id: push
+        uses: docker/build-push-action@v7.2.0
+        with:
+          context: ./build_resource
+          file: ./build_resource/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # GitHub Actions cache 用作跨 build 缓存层（PR、main、release 共享同一份 cache）
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-contexts: |
+            ubuntu-quick=https://github.com/xfl12345/ubuntu-quick.git#79c0cd1b9aafaacc2ad2bd5cc38ec168e540e418
+            openssh-server=https://github.com/linuxserver/docker-openssh-server.git#879130ad04f326a039c173bf40b852a0f7e4485d
+
+      # 生成 provenance attestation，push 到 GHCR 与镜像 digest 绑定
+      # 仅在主构建成功且非 PR 时执行
+      - name: Generate artifact attestation
+        if: github.event_name != 'pull_request'
+        uses: actions/attest@v4.1.1
+        with:
+          # subject-name 必须是 GHCR 镜像全名（不带 tag），attest 会用 subject-digest 定位镜像
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
