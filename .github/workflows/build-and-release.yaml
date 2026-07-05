@@ -83,7 +83,7 @@ jobs:
         # 将动态变量注入到环境中，供 docker-compose.ci.yaml 读取
         env:
           TAG_SUFFIX: ${{ matrix.tag_suffix }}
-        run: docker compose -f docker-compose.yaml -f docker-compose.ci.yaml build --push
+        run: docker compose -f docker-compose.yaml -f docker-compose.build.yaml build --push
 
       - name: Get image digest
         id: digest

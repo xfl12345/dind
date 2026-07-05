@@ -13,15 +13,10 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     shm_size: 8gb
-    image: localbuild/dind
+    image: ghcr.io/xfl12345/dind
     container_name: dind
-    pull_policy: build
-    build:
-      context: ./build_resource
-      dockerfile: ./Dockerfile
-      additional_contexts:
-        ubuntu-quick: https://github.com/xfl12345/ubuntu-quick.git#79c0cd1b9aafaacc2ad2bd5cc38ec168e540e418
-        openssh-server: https://github.com/linuxserver/docker-openssh-server.git#879130ad04f326a039c173bf40b852a0f7e4485d
+    # image: ghcr.nju.edu.cn/xfl12345/dind
+    pull_policy: always
     volumes:
       - /dev/dri:/dev/dri
       - /lib/modules:/lib/modules:ro
