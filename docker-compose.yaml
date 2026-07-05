@@ -14,8 +14,9 @@ services:
       - SYS_MODULE
     shm_size: 8gb
     image: ghcr.io/xfl12345/dind
-    container_name: dind
+    ### 如遇网络波动，可以替换为如下镜像 tag
     # image: ghcr.nju.edu.cn/xfl12345/dind
+    container_name: dind
     pull_policy: always
     volumes:
       - /dev/dri:/dev/dri
