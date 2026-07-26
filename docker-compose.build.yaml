@@ -7,7 +7,7 @@ services:
       context: ./build_resource
       dockerfile: ./Dockerfile
       additional_contexts:
-        ubuntu-quick: https://github.com/xfl12345/ubuntu-quick.git#79c0cd1b9aafaacc2ad2bd5cc38ec168e540e418
+        ubuntu-quick: https://github.com/xfl12345/ubuntu-quick.git#04ec5c4033a920cb78c89d948366687fdab89234
         openssh-server: https://github.com/linuxserver/docker-openssh-server.git#879130ad04f326a039c173bf40b852a0f7e4485d
       # platforms:
       #   - linux/amd64
